@@ -1,6 +1,6 @@
 import pygame
 import pymysql
-from db import connect_db  # db.py 파일에서 connect_db() 함수 있어야 함
+from db import connect_db
 
 pygame.init()
 
@@ -126,7 +126,7 @@ while running:
                 else:
                     password_input = password_input[:-1]
             elif event.key == pygame.K_RETURN:
-                pass  # 엔터 기능 향후 추가
+                pass
             else:
                 if active_input == "username":
                     username_input += event.unicode
