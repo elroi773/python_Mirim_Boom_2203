@@ -34,6 +34,10 @@ active_input = None
 # 로그인/회원가입 모드
 mode = "login"
 
+# 배경 이미지 불러오기 및 크기 조절
+background_img = pygame.image.load("./img/backgroundimg.jpg")
+background_img = pygame.transform.scale(background_img, (WIDTH, HEIGHT))
+
 # 텍스트 출력 함수
 def draw_text(text, x, y, color=BLACK):
     screen.blit(font.render(text, True, color), (x, y))
@@ -73,7 +77,8 @@ def login_user(username, password):
 # 메인 루프
 running = True
 while running:
-    screen.fill(WHITE)
+    # 배경 이미지 그리기
+    screen.blit(background_img, (0, 0))
 
     # 라벨 출력
     draw_text("아이디:", 50, 100)
