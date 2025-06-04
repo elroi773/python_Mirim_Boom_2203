@@ -13,18 +13,21 @@ pygame.display.set_caption("로그인 & 회원가입")
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
-BLUE = (0, 0, 255)
+BLUE = (50, 80, 200)
+LIGHT_BLUE = (170, 190, 255)
 
 # 폰트 설정
 try:
-    font_path = "GmarketSansMedium.otf"  # 같은 폴더에 위치해야 함
+    font_path = "GmarketSansMedium.otf"
     font = pygame.font.Font(font_path, 24)
     label_font = pygame.font.Font(font_path, 30)
     button_font = pygame.font.Font(font_path, 28)
-except FileNotFoundError:
+    status_font = pygame.font.Font(font_path, 22)
+except:
     font = pygame.font.SysFont("malgungothic", 24)
     label_font = pygame.font.SysFont("malgungothic", 30)
     button_font = pygame.font.SysFont("malgungothic", 28)
+    status_font = pygame.font.SysFont("malgungothic", 22)
 
 # 입력 필드 상태
 username_input = ""
@@ -33,38 +36,28 @@ active_input = None
 
 # 로그인/회원가입 모드
 mode = "login"
+status_message = ""
 
-# 배경 이미지 불러오기 및 크기 조절
+# 배경 이미지
 background_img = pygame.image.load("./img/backgroundimg.jpg")
 background_img = pygame.transform.scale(background_img, (WIDTH, HEIGHT))
 
-# 텍스트 출력 함수
-def draw_text(text, x, y, color=BLACK):
-    screen.blit(font.render(text, True, color), (x, y))
+# 텍스트 출력
+def draw_shadow_text(text, x, y, font, color=WHITE):
+    shadow = font.render(text, True, BLACK)
+    screen.blit(shadow, (x + 2, y + 2))
+    label = font.render(text, True, color)
+    screen.blit(label, (x, y))
 
-# 버튼 출력 함수
+# 버튼 출력
 def draw_button(text, x, y, w, h, color, text_color):
-    pygame.draw.rect(screen, color, (x, y, w, h), border_radius=5)
+    pygame.draw.rect(screen, color, (x, y, w, h), border_radius=10)
+    pygame.draw.rect(screen, BLACK, (x, y, w, h), 2, border_radius=10)
     text_surface = button_font.render(text, True, text_color)
     screen.blit(text_surface, (x + (w - text_surface.get_width()) // 2,
                                 y + (h - text_surface.get_height()) // 2))
     return pygame.Rect(x, y, w, h)
 
-# 회원가입 처리
-def register_user(username, password):
-    conn = connect_db()
-    try:
-        with conn.cursor() as cursor:
-            sql = "INSERT INTO users (username, password) VALUES (%s, %s)"
-            cursor.execute(sql, (username, password))
-            conn.commit()
-            return "회원가입 성공!"
-    except pymysql.err.IntegrityError:
-        return "이미 존재하는 사용자입니다!"
-    finally:
-        conn.close()
-
-# 로그인 처리
 def login_user(username, password):
     conn = connect_db()
     with conn.cursor() as cursor:
@@ -77,65 +70,77 @@ def login_user(username, password):
 # 메인 루프
 running = True
 while running:
-    # 배경 이미지 그리기
     screen.blit(background_img, (0, 0))
 
-    # 라벨 출력
-    draw_text("아이디:", 50, 100)
-    draw_text("비밀번호:", 50, 150)
+    # UI 요소 위치
+    input_x, input_w, input_h = 250, 200, 35
+    username_rect = pygame.Rect(input_x, 140, input_w, input_h)
+    password_rect = pygame.Rect(input_x, 200, input_w, input_h)
 
-    # 입력 상자 테두리
-    pygame.draw.rect(screen, GRAY if active_input == "username" else BLACK, (150, 100, 200, 30), 2)
-    pygame.draw.rect(screen, GRAY if active_input == "password" else BLACK, (150, 150, 200, 30), 2)
+    # 텍스트
+    draw_shadow_text("아이디", 150, 145, label_font)
+    draw_shadow_text("비밀번호", 130, 205, label_font)
 
-    # 입력 텍스트 출력
-    draw_text(username_input, 160, 105)
-    draw_text("*" * len(password_input), 160, 155)
+    # 입력 상자
+    pygame.draw.rect(screen, WHITE, username_rect, border_radius=8)
+    pygame.draw.rect(screen, WHITE, password_rect, border_radius=8)
 
-    # 버튼 출력
+    pygame.draw.rect(screen, BLUE if active_input == "username" else BLACK, username_rect, 2, border_radius=8)
+    pygame.draw.rect(screen, BLUE if active_input == "password" else BLACK, password_rect, 2, border_radius=8)
+
+    screen.blit(font.render(username_input, True, BLACK), (username_rect.x + 10, username_rect.y + 5))
+    screen.blit(font.render("*" * len(password_input), True, BLACK), (password_rect.x + 10, password_rect.y + 5))
+
+    # 버튼
     if mode == "login":
-        login_button = draw_button("로그인", 200, 250, 100, 40, BLACK, WHITE)
-        switch_button = draw_button("회원가입", 350, 350, 100, 30, WHITE, BLUE)
+        login_button = draw_button("로그인", 290, 270, 120, 45, BLUE, WHITE)
+        switch_button = draw_button("회원가입", 290, 330, 120, 40, WHITE, BLUE)
     else:
-        register_button = draw_button("회원가입", 200, 250, 100, 40, BLACK, WHITE)
-        switch_button = draw_button("로그인으로", 330, 350, 120, 30, WHITE, BLUE)
+        register_button = draw_button("회원가입", 290, 270, 120, 45, BLUE, WHITE)
+        switch_button = draw_button("로그인으로", 290, 330, 120, 40, WHITE, BLUE)
+
+    # 상태 메시지 출력
+    if status_message:
+        screen.blit(status_font.render(status_message, True, BLACK), (WIDTH // 2 - 120, 390))
 
     pygame.display.flip()
 
+    # 이벤트 처리
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x, y = event.pos
-            if 150 <= x <= 350 and 100 <= y <= 130:
+            if username_rect.collidepoint(x, y):
                 active_input = "username"
-            elif 150 <= x <= 350 and 150 <= y <= 180:
+            elif password_rect.collidepoint(x, y):
                 active_input = "password"
             elif mode == "login" and login_button.collidepoint(x, y):
                 if login_user(username_input, password_input):
-                    print("로그인 성공!")
+                    status_message = "🎉 로그인 성공!"
                 else:
-                    print("로그인 실패!")
+                    status_message = "❌ 로그인 실패!"
             elif mode == "register" and register_button.collidepoint(x, y):
-                print(register_user(username_input, password_input))
+                status_message = register_user(username_input, password_input)
             elif switch_button.collidepoint(x, y):
                 mode = "register" if mode == "login" else "login"
                 username_input = ""
                 password_input = ""
+                status_message = ""
 
         elif event.type == pygame.KEYDOWN and active_input:
             if event.key == pygame.K_BACKSPACE:
                 if active_input == "username":
                     username_input = username_input[:-1]
-                else:
+                elif active_input == "password":
                     password_input = password_input[:-1]
             elif event.key == pygame.K_RETURN:
                 pass
             else:
                 if active_input == "username":
                     username_input += event.unicode
-                else:
+                elif active_input == "password":
                     password_input += event.unicode
 
 pygame.quit()
