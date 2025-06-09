@@ -1,6 +1,9 @@
 import pygame
 import pymysql
 from db import connect_db  # db.py 파일에서 connect_db 함수 import
+import subprocess
+import sys
+
 
 pygame.init()
 
@@ -144,8 +147,14 @@ while running:
             elif mode == "login" and login_button.collidepoint(x, y):
                 if login_user(username_input, password_input):
                     status_message = "🎉 로그인 성공!"
+                    pygame.display.flip()
+                    pygame.time.delay(1000)  # 잠시 메시지를 보여주기 위해 1초 대기
+                    pygame.quit()  # 현재 Pygame 창 닫기
+                    subprocess.Popen([sys.executable, "game.py"])  # game.py 실행
+                    sys.exit()  # 현재 로그인 프로그램 종료
                 else:
                     status_message = "❌ 로그인 실패!"
+
             elif mode == "register" and register_button.collidepoint(x, y):
                 status_message = register_user(username_input, password_input)
             elif switch_button.collidepoint(x, y):
