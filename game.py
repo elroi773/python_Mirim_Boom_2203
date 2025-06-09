@@ -37,11 +37,23 @@ class Img_Object:
     def show_img(self):
         screen.blit(self.img, (self.x, self.y))
 
+# 배경 이미지 설정
+background = Img_Object()
+try:
+    background.add_img(img_path)
+    background.change_size(*size)  # 화면 크기에 맞게 조절
+except Exception as e:
+    print(f"[ERROR] 배경 이미지 오류: {e}")
+    pygame.quit()
+    exit()
+
+
 # 주인공 초기화
 hero = Img_Object()
 try:
     hero.add_img(f"./img/hero.png")
-    hero.change_size(80, 80)
+    hero.change_size(130, 180)
+
 except Exception as e:
     print(f"[ERROR] hero 이미지 오류: {e}")
     pygame.quit()
@@ -172,7 +184,8 @@ while system_exit == 0:
         system_exit = 1
 
     # 화면 그리기
-    screen.fill(black_color)
+    background.show_img()
+
     hero.show_img()
     for m in missile_list:
         m.show_img()
