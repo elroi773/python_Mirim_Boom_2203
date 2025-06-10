@@ -3,6 +3,7 @@ import pygame
 import random
 import time
 import os
+import sys
 
 # 1. 초기화
 pygame.init()
@@ -48,21 +49,31 @@ except Exception as e:
     exit()
 
 
-# 주인공 초기화
+# 선택된 캐릭터 파일명 읽기
+with open("selected_character.txt", "r") as f:
+    selected_hero_img = f.read().strip()
+
+# hero 초기화
 hero = Img_Object()
 try:
-    hero.add_img(f"./img/hero.png")
+    hero.add_img(f"./img/{selected_hero_img}")
     hero.change_size(130, 180)
-
 except Exception as e:
     print(f"[ERROR] hero 이미지 오류: {e}")
     pygame.quit()
     exit()
 
+
+
+
+
 hero.x = round(size[0] / 2) - round(hero.width / 2)
 hero.y = size[1] - hero.height - 100
 hero.move = 5
 k = 0
+
+
+
 
 # 입력 상태
 left_move = False
