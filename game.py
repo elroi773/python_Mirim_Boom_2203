@@ -1,27 +1,30 @@
-# pip install pygame
 import pygame
 import random
 import time
 import os
-import sys
 
-# 1. 초기화
+# 초기화
 pygame.init()
 
-# 2. 게임 화면 설정
 size = [400, 900]
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("pygameEX")
 
-# 3. 게임 설정 변수
 clock = pygame.time.Clock()
 black_color = (0, 0, 0)
+white_color = (255, 255, 255)
+font = pygame.font.SysFont(None, 40)  # 점수/목숨 표시 폰트
+
 img_path = r"./img/game_background_img.png"
 
 class Img_Object:
     def __init__(self):
         self.x = 0
         self.y = 0
+        self.width = 0
+        self.height = 0
+        self.move = 0
+        self.img_path = ""
 
     def add_img(self, address):
         if not os.path.exists(address):
@@ -30,6 +33,7 @@ class Img_Object:
             self.img = pygame.image.load(address).convert_alpha()
         else:
             self.img = pygame.image.load(address).convert()
+        self.img_path = address
 
     def change_size(self, width, height):
         self.img = pygame.transform.scale(self.img, (width, height))
@@ -38,22 +42,21 @@ class Img_Object:
     def show_img(self):
         screen.blit(self.img, (self.x, self.y))
 
-# 배경 이미지 설정
+def draw_text(text, pos_x, pos_y, color=white_color):
+    img = font.render(text, True, color)
+    screen.blit(img, (pos_x, pos_y))
+
+# 배경
 background = Img_Object()
 try:
     background.add_img(img_path)
-    background.change_size(*size)  # 화면 크기에 맞게 조절
+    background.change_size(*size)
 except Exception as e:
     print(f"[ERROR] 배경 이미지 오류: {e}")
     pygame.quit()
     exit()
 
-
-# 선택된 캐릭터 파일명 읽기
-with open("selected_character.txt", "r") as f:
-    selected_hero_img = f.read().strip()
-
-# hero 초기화
+selected_hero_img = "hero.png"  # 실제 hero 이미지 파일명으로 변경
 hero = Img_Object()
 try:
     hero.add_img(f"./img/{selected_hero_img}")
@@ -63,29 +66,22 @@ except Exception as e:
     pygame.quit()
     exit()
 
-
-
-
-
 hero.x = round(size[0] / 2) - round(hero.width / 2)
 hero.y = size[1] - hero.height - 100
 hero.move = 5
-k = 0
 
-
-
-
-# 입력 상태
 left_move = False
 right_move = False
 space_on = False
 
-# 객체 리스트
 missile_list = []
 enemy_list = []
 
-# 게임 루프
+score = 0
+lives = 3
+
 system_exit = 0
+k = 0
 while system_exit == 0:
     clock.tick(60)
 
@@ -140,19 +136,23 @@ while system_exit == 0:
             new_missile_list.append(m)
     missile_list = new_missile_list
 
-    # 적기 생성
+    # 적기 생성: enemy, java, js (js는 목숨 깎는 적)
     if random.random() >= 0.98:
-        enemy = Img_Object()
+        obj = Img_Object()
         try:
-            enemy.add_img(f"./img/enemy.png")
-            enemy.change_size(35, 35)
+            r = random.random()
+            if r > 0.5:
+                obj.add_img(f"./img/enemy.png")  # enemy: 점수 +1
+            elif r > 0.2:
+                obj.add_img(f"./img/java.png")   # java: 점수 +1
+            obj.change_size(35, 35)
         except Exception as e:
-            print(f"[ERROR] enemy 이미지 오류: {e}")
+            print(f"[ERROR] 적기 이미지 오류: {e}")
             continue
-        enemy.x = random.randrange(round(hero.width / 2), size[0] - enemy.width - round(hero.width / 2))
-        enemy.y = 15
-        enemy.move = 3
-        enemy_list.append(enemy)
+        obj.x = random.randrange(round(hero.width / 2), size[0] - obj.width - round(hero.width / 2))
+        obj.y = 15
+        obj.move = 3
+        enemy_list.append(obj)
 
     # 적기 이동 및 제거
     new_enemy_list = []
@@ -165,11 +165,29 @@ while system_exit == 0:
     # 미사일과 적기 충돌 검사
     crash_m_list = []
     crash_e_list = []
+
     for m in missile_list:
         for e in enemy_list:
-            if (m.x - e.width <= e.x <= m.x + m.width) and (m.y - e.height <= e.y <= m.y + m.height):
-                crash_m_list.append(m)
-                crash_e_list.append(e)
+            # 미사일과 적 충돌 범위 조건 (간단 충돌 감지)
+            if (m.x - e.width <= e.x <= m.x + m.width) and (m.y - e.height <= e.y <= m.y + e.height):
+                if "java.png" in e.img_path:
+                    score += 1
+                    crash_m_list.append(m)
+                    crash_e_list.append(e)
+                    print(f"Java 맞음! 점수: {score}")
+                elif "js.png" in e.img_path:  # enemy 역할, js 이미지
+                    lives -= 1
+                    crash_m_list.append(m)
+                    crash_e_list.append(e)
+                    print(f"Enemy (js) 맞음! 남은 목숨: {lives}")
+                    if lives <= 0:
+                        print("목숨 0, 게임 오버")
+                        system_exit = 1
+                else:
+                    # 다른 적(예: enemy.png 등)은 점수 오르지 않고 무시 (또는 제거만)
+                    crash_m_list.append(m)
+                    crash_e_list.append(e)
+
 
     for m in crash_m_list:
         if m in missile_list:
@@ -178,7 +196,7 @@ while system_exit == 0:
         if e in enemy_list:
             enemy_list.remove(e)
 
-    # 주인공과 적기 충돌
+    # 주인공과 적기 충돌 검사 (js, java, enemy 모두 충돌 시 게임 오버)
     crash_hero_enemy_list = []
     for e in enemy_list:
         if (hero.x - e.width <= e.x <= hero.x + hero.width) and (hero.y - e.height <= e.y <= hero.y + hero.height):
@@ -196,13 +214,16 @@ while system_exit == 0:
 
     # 화면 그리기
     background.show_img()
-
     hero.show_img()
     for m in missile_list:
         m.show_img()
     for e in enemy_list:
         e.show_img()
+
+    # 점수, 목숨 표시 (우측 상단)
+    draw_text(f"Score: {score}", size[0] - 150, 10)
+    draw_text(f"Lives: {lives}", size[0] - 150, 50)
+
     pygame.display.flip()
 
-# 게임 종료
 pygame.quit()
