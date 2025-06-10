@@ -166,6 +166,8 @@ while system_exit == 0:
     crash_m_list = []
     crash_e_list = []
 
+    bonus_point = 0 
+
     for m in missile_list:
         for e in enemy_list:
             # 미사일과 적 충돌 범위 조건 (간단 충돌 감지)
@@ -175,14 +177,11 @@ while system_exit == 0:
                     crash_m_list.append(m)
                     crash_e_list.append(e)
                     print(f"Java 맞음! 점수: {score}")
-                elif "js.png" in e.img_path:  # enemy 역할, js 이미지
-                    lives -= 1
-                    crash_m_list.append(m)
-                    crash_e_list.append(e)
-                    print(f"Enemy (js) 맞음! 남은 목숨: {lives}")
-                    if lives <= 0:
-                        print("목숨 0, 게임 오버")
-                        system_exit = 1
+
+                    if score % 10 == 0 and score != 0:
+                        bonus_point += 10
+                        print(f"보너스 점수! 현재 보너스: {bonus_point}")
+                        score += bonus_point
                 else:
                     # 다른 적(예: enemy.png 등)은 점수 오르지 않고 무시 (또는 제거만)
                     crash_m_list.append(m)
@@ -196,21 +195,28 @@ while system_exit == 0:
         if e in enemy_list:
             enemy_list.remove(e)
 
-    # 주인공과 적기 충돌 검사 (js, java, enemy 모두 충돌 시 게임 오버)
+    # 주인공과 적기 충돌 검사 (java, enemy 모두 충돌 시 게임 오버)
     crash_hero_enemy_list = []
     for e in enemy_list:
         if (hero.x - e.width <= e.x <= hero.x + hero.width) and (hero.y - e.height <= e.y <= hero.y + hero.height):
-            crash_hero_enemy_list.append(e)
+            if "enemy.png" in e.img_path:
+                lives -= 1
+                enemy_list.remove(e)
+                
+                if lives <= 0:
+                    print(f"게임 오버: 주인공과 {e.img_path} 충돌")
+                    time.sleep(3)
+                    system_exit = 1
+            elif "java.png" in e.img_path:
+                score += 1
+                print(f"Java 충돌! 점수: {score}")
+                enemy_list.remove(e)
+                # 보너스 점수 처리
+                if score % 10 == 0:
+                    bonus_point += 10
+                    score += bonus_point
+                    print(f"보너스 점수! 현재 보너스: {bonus_point}")
 
-    for e in crash_hero_enemy_list:
-        if e in enemy_list:
-            enemy_list.remove(e)
-            print("주인공과 충돌한 적기 제거")
-
-    if crash_hero_enemy_list:
-        print("게임 오버: 주인공과 적기 충돌")
-        time.sleep(3)
-        system_exit = 1
 
     # 화면 그리기
     background.show_img()
