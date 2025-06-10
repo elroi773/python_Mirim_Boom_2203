@@ -1,9 +1,8 @@
 import pygame
 import pymysql
-from db import connect_db  # db.py 파일에서 connect_db 함수 import
+from db import connect_db
 import subprocess
-import sys
-
+import select
 
 pygame.init()
 
@@ -61,7 +60,6 @@ def draw_button(text, x, y, w, h, color, text_color):
                                 y + (h - text_surface.get_height()) // 2))
     return pygame.Rect(x, y, w, h)
 
-# 로그인 함수
 def login_user(username, password):
     conn = connect_db()
     with conn.cursor() as cursor:
@@ -70,30 +68,6 @@ def login_user(username, password):
         user = cursor.fetchone()
         conn.close()
         return user is not None
-
-# 회원가입 함수
-def register_user(username, password):
-    if not username or not password:
-        return "⚠️ 아이디와 비밀번호를 입력하세요."
-
-    conn = connect_db()
-    try:
-        with conn.cursor() as cursor:
-            # 아이디 중복 확인
-            sql = "SELECT * FROM users WHERE username = %s"
-            cursor.execute(sql, (username,))
-            if cursor.fetchone():
-                return "❌ 이미 존재하는 아이디입니다."
-
-            # 회원가입
-            sql = "INSERT INTO users (username, password) VALUES (%s, %s)"
-            cursor.execute(sql, (username, password))
-            conn.commit()
-            return "✅ 회원가입 성공!"
-    except Exception as e:
-        return f"❌ 오류 발생: {e}"
-    finally:
-        conn.close()
 
 # 메인 루프
 running = True
@@ -148,13 +122,12 @@ while running:
                 if login_user(username_input, password_input):
                     status_message = "🎉 로그인 성공!"
                     pygame.display.flip()
-                    pygame.time.delay(1000)  # 잠시 메시지를 보여주기 위해 1초 대기
-                    pygame.quit()  # 현재 Pygame 창 닫기
-                    subprocess.Popen([sys.executable, "game.py"])  # game.py 실행
-                    sys.exit()  # 현재 로그인 프로그램 종료
+                    pygame.time.delay(1000)  # 로그인 성공 메시지 잠깐 보여주기
+                    pygame.quit()
+                    subprocess.run(["python", "select.py"])
+                    exit()
                 else:
                     status_message = "❌ 로그인 실패!"
-
             elif mode == "register" and register_button.collidepoint(x, y):
                 status_message = register_user(username_input, password_input)
             elif switch_button.collidepoint(x, y):
