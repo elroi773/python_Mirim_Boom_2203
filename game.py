@@ -6,14 +6,18 @@ import os
 # 초기화
 pygame.init()
 
-size = [400, 900]
-screen = pygame.display.set_mode(size)
+WIDTH, HEIGHT = 600, 900
+GAME_WIDTH = 400  # 게임 화면 너비
+TIMETABLE_WIDTH = WIDTH - GAME_WIDTH  # 시간표 영역 너비
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("pygameEX")
 
 clock = pygame.time.Clock()
 black_color = (0, 0, 0)
 white_color = (255, 255, 255)
-font = pygame.font.Font("GmarketSansMedium.otf", 20)  # 점수/목숨 표시 폰트
+gray_color = (230, 230, 230)
+font = pygame.font.Font("GmarketSansMedium.otf", 20)
 
 img_path = r"./img/game_background.png"
 
@@ -50,13 +54,13 @@ def draw_text(text, pos_x, pos_y, color=white_color):
 background = Img_Object()
 try:
     background.add_img(img_path)
-    background.change_size(*size)
+    background.change_size(GAME_WIDTH, HEIGHT)
 except Exception as e:
     print(f"[ERROR] 배경 이미지 오류: {e}")
     pygame.quit()
     exit()
 
-selected_hero_img = "hero.png"  # 실제 hero 이미지 파일명으로 변경
+selected_hero_img = "hero.png"
 hero = Img_Object()
 try:
     hero.add_img(f"./img/{selected_hero_img}")
@@ -66,8 +70,8 @@ except Exception as e:
     pygame.quit()
     exit()
 
-hero.x = round(size[0] / 2) - round(hero.width / 2)
-hero.y = size[1] - hero.height - 100
+hero.x = round(GAME_WIDTH / 2) - round(hero.width / 2)
+hero.y = HEIGHT - hero.height - 100
 hero.move = 5
 
 left_move = False
@@ -82,7 +86,7 @@ lives = 3
 
 system_exit = 0
 k = 0
-start_time = time.time()  # 게임 시작 시간
+start_time = time.time()
 time_limit = 30
 
 while system_exit == 0:
@@ -120,8 +124,8 @@ while system_exit == 0:
             hero.x = 0
     if right_move:
         hero.x += hero.move
-        if hero.x >= size[0] - hero.width:
-            hero.x = size[0] - hero.width
+        if hero.x >= GAME_WIDTH - hero.width:
+            hero.x = GAME_WIDTH - hero.width
 
     if space_on and k % 6 == 0:
         missile = Img_Object()
@@ -149,14 +153,14 @@ while system_exit == 0:
         try:
             r = random.random()
             if r > 0.5:
-                obj.add_img(f"./img/enemy.png")  # enemy: 점수 X
+                obj.add_img(f"./img/enemy.png")
             elif r > 0.2:
-                obj.add_img(f"./img/java.png")   # java: 점수 +1
+                obj.add_img(f"./img/java.png")
             obj.change_size(35, 35)
         except Exception as e:
             print(f"[ERROR] 적기 이미지 오류: {e}")
             continue
-        obj.x = random.randrange(round(hero.width / 2), size[0] - obj.width - round(hero.width / 2))
+        obj.x = random.randrange(round(hero.width / 2), GAME_WIDTH - obj.width - round(hero.width / 2))
         obj.y = 15
         obj.move = 3
         enemy_list.append(obj)
@@ -164,13 +168,13 @@ while system_exit == 0:
     new_enemy_list = []
     for e in enemy_list:
         e.y += e.move
-        if e.y <= size[1]:
+        if e.y <= HEIGHT:
             new_enemy_list.append(e)
     enemy_list = new_enemy_list
 
     crash_m_list = []
     crash_e_list = []
-    bonus_point = 0 
+    bonus_point = 0
 
     for m in missile_list:
         for e in enemy_list:
@@ -212,7 +216,10 @@ while system_exit == 0:
                     score += bonus_point
                     print(f"보너스 점수! 현재 보너스: {bonus_point}")
 
+    # 화면 그리기
     background.show_img()
+    pygame.draw.rect(screen, gray_color, [GAME_WIDTH, 0, TIMETABLE_WIDTH, HEIGHT])  # 시간표 영역
+
     hero.show_img()
     for m in missile_list:
         m.show_img()
@@ -220,8 +227,15 @@ while system_exit == 0:
         e.show_img()
 
     draw_text(f"남은 시간: {remaining_time}초", 20, 10)
-    draw_text(f"Score: {score}", size[0] - 150, 10)
-    draw_text(f"Lives: {lives}", size[0] - 150, 50)
+    draw_text(f"Score: {score}", 240, 10)
+    draw_text(f"Lives: {lives}", 240, 50)
+
+    # 시간표 내용 출력 (예시)
+    draw_text("오늘의 시간표", GAME_WIDTH + 20, 20, black_color)
+    draw_text("1교시: JAVA", GAME_WIDTH + 20, 60, (0,0,255))
+    draw_text("2교시: HTML", GAME_WIDTH + 20, 100, black_color)
+    draw_text("3교시: PYTHON", GAME_WIDTH + 20, 140, black_color)
+    draw_text("4교시: PHP", GAME_WIDTH + 20, 180, black_color)
 
     pygame.display.flip()
 
