@@ -6,16 +6,20 @@ import os
 # 초기화
 pygame.init()
 
-size = [400, 900]
-screen = pygame.display.set_mode(size)
+WIDTH, HEIGHT = 600, 900
+GAME_WIDTH = 400  # 게임 화면 너비
+TIMETABLE_WIDTH = WIDTH - GAME_WIDTH  # 시간표 영역 너비
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("pygameEX")
 
 clock = pygame.time.Clock()
 black_color = (0, 0, 0)
 white_color = (255, 255, 255)
-font = pygame.font.SysFont(None, 40)  # 점수/목숨 표시 폰트
+gray_color = (230, 230, 230)
+font = pygame.font.Font("GmarketSansMedium.otf", 20)
 
-img_path = r"./img/game_background_img.png"
+img_path = r"./img/game_background.png"
 
 class Img_Object:
     def __init__(self):
@@ -50,13 +54,13 @@ def draw_text(text, pos_x, pos_y, color=white_color):
 background = Img_Object()
 try:
     background.add_img(img_path)
-    background.change_size(*size)
+    background.change_size(GAME_WIDTH, HEIGHT)
 except Exception as e:
     print(f"[ERROR] 배경 이미지 오류: {e}")
     pygame.quit()
     exit()
 
-selected_hero_img = "hero2.png"  # 실제 hero 이미지 파일명으로 변경
+selected_hero_img = "hero2.png"
 hero = Img_Object()
 try:
     hero.add_img(f"./img/{selected_hero_img}")
@@ -66,8 +70,8 @@ except Exception as e:
     pygame.quit()
     exit()
 
-hero.x = round(size[0] / 2) - round(hero.width / 2)
-hero.y = size[1] - hero.height - 100
+hero.x = round(GAME_WIDTH / 2) - round(hero.width / 2)
+hero.y = HEIGHT - hero.height - 100
 hero.move = 5
 
 left_move = False
@@ -82,8 +86,19 @@ lives = 3
 
 system_exit = 0
 k = 0
+start_time = time.time()
+time_limit = 30
+
 while system_exit == 0:
     clock.tick(60)
+
+    elapsed_time = time.time() - start_time
+    remaining_time = max(0, int(time_limit - elapsed_time))
+
+    if elapsed_time >= time_limit:
+        print("30초 시간 종료! 게임 오버")
+        time.sleep(2)
+        system_exit = 1
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -103,17 +118,15 @@ while system_exit == 0:
             elif event.key == pygame.K_SPACE:
                 space_on = False
 
-    # 움직임 처리
     if left_move:
         hero.x -= hero.move
         if hero.x <= 0:
             hero.x = 0
     if right_move:
         hero.x += hero.move
-        if hero.x >= size[0] - hero.width:
-            hero.x = size[0] - hero.width
+        if hero.x >= GAME_WIDTH - hero.width:
+            hero.x = GAME_WIDTH - hero.width
 
-    # 미사일 발사
     if space_on and k % 6 == 0:
         missile = Img_Object()
         try:
@@ -128,7 +141,6 @@ while system_exit == 0:
         missile_list.append(missile)
     k += 1
 
-    # 미사일 이동 및 제거
     new_missile_list = []
     for m in missile_list:
         m.y -= m.move
@@ -136,57 +148,48 @@ while system_exit == 0:
             new_missile_list.append(m)
     missile_list = new_missile_list
 
-    # 적기 생성: enemy, java, js (js는 목숨 깎는 적)
     if random.random() >= 0.98:
         obj = Img_Object()
         try:
             r = random.random()
             if r > 0.5:
-                obj.add_img(f"./img/enemy.png")  # enemy: 점수 +1
+                obj.add_img(f"./img/enemy.png")
             elif r > 0.2:
-                obj.add_img(f"./img/java.png")   # java: 점수 +1
+                obj.add_img(f"./img/java.png")
             obj.change_size(35, 35)
         except Exception as e:
             print(f"[ERROR] 적기 이미지 오류: {e}")
             continue
-        obj.x = random.randrange(round(hero.width / 2), size[0] - obj.width - round(hero.width / 2))
+        obj.x = random.randrange(round(hero.width / 2), GAME_WIDTH - obj.width - round(hero.width / 2))
         obj.y = 15
         obj.move = 3
         enemy_list.append(obj)
 
-    # 적기 이동 및 제거
     new_enemy_list = []
     for e in enemy_list:
         e.y += e.move
-        if e.y <= size[1]:
+        if e.y <= HEIGHT:
             new_enemy_list.append(e)
     enemy_list = new_enemy_list
 
-    # 미사일과 적기 충돌 검사
     crash_m_list = []
     crash_e_list = []
-
-    bonus_point = 0 
+    bonus_point = 0
 
     for m in missile_list:
         for e in enemy_list:
-            # 미사일과 적 충돌 범위 조건 (간단 충돌 감지)
             if (m.x - e.width <= e.x <= m.x + m.width) and (m.y - e.height <= e.y <= m.y + e.height):
                 if "java.png" in e.img_path:
-                    score += 1
                     crash_m_list.append(m)
                     crash_e_list.append(e)
                     print(f"Java 맞음! 점수: {score}")
-
                     if score % 10 == 0 and score != 0:
                         bonus_point += 10
                         print(f"보너스 점수! 현재 보너스: {bonus_point}")
                         score += bonus_point
                 else:
-                    # 다른 적(예: enemy.png 등)은 점수 오르지 않고 무시 (또는 제거만)
                     crash_m_list.append(m)
                     crash_e_list.append(e)
-
 
     for m in crash_m_list:
         if m in missile_list:
@@ -195,14 +198,11 @@ while system_exit == 0:
         if e in enemy_list:
             enemy_list.remove(e)
 
-    # 주인공과 적기 충돌 검사 (java, enemy 모두 충돌 시 게임 오버)
-    crash_hero_enemy_list = []
     for e in enemy_list:
         if (hero.x - e.width <= e.x <= hero.x + hero.width) and (hero.y - e.height <= e.y <= hero.y + hero.height):
             if "enemy.png" in e.img_path:
                 lives -= 1
                 enemy_list.remove(e)
-                
                 if lives <= 0:
                     print(f"게임 오버: 주인공과 {e.img_path} 충돌")
                     time.sleep(3)
@@ -211,24 +211,31 @@ while system_exit == 0:
                 score += 1
                 print(f"Java 충돌! 점수: {score}")
                 enemy_list.remove(e)
-                # 보너스 점수 처리
                 if score % 10 == 0:
                     bonus_point += 10
                     score += bonus_point
                     print(f"보너스 점수! 현재 보너스: {bonus_point}")
 
-
     # 화면 그리기
     background.show_img()
+    pygame.draw.rect(screen, gray_color, [GAME_WIDTH, 0, TIMETABLE_WIDTH, HEIGHT])  # 시간표 영역
+
     hero.show_img()
     for m in missile_list:
         m.show_img()
     for e in enemy_list:
         e.show_img()
 
-    # 점수, 목숨 표시 (우측 상단)
-    draw_text(f"Score: {score}", size[0] - 150, 10)
-    draw_text(f"Lives: {lives}", size[0] - 150, 50)
+    draw_text(f"남은 시간: {remaining_time}초", 20, 10)
+    draw_text(f"Score: {score}", 240, 10)
+    draw_text(f"Lives: {lives}", 240, 50)
+
+    # 시간표 내용 출력 (예시)
+    draw_text("오늘의 시간표", GAME_WIDTH + 20, 20, black_color)
+    draw_text("1교시: JAVA", GAME_WIDTH + 20, 60, (0,0,255))
+    draw_text("2교시: HTML", GAME_WIDTH + 20, 100, black_color)
+    draw_text("3교시: PYTHON", GAME_WIDTH + 20, 140, black_color)
+    draw_text("4교시: PHP", GAME_WIDTH + 20, 180, black_color)
 
     pygame.display.flip()
 
