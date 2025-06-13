@@ -69,6 +69,28 @@ def login_user(username, password):
         conn.close()
         return user is not None
 
+def register_user(username, password):
+    if username == "" or password == "":
+        return "⚠️ 아이디와 비밀번호를 입력하세요."
+    
+    try:
+        conn = connect_db()
+        with conn.cursor() as cursor:
+            # 아이디 중복 확인
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                return "❌ 이미 존재하는 아이디입니다."
+
+            # 새 유저 삽입
+            cursor.execute("INSERT INTO users (username, password, ranking) VALUES (%s, %s, %s)", (username, password, 0))
+            conn.commit()
+        return "🎉 회원가입 성공!"
+    except Exception as e:
+        return f"🚫 오류 발생: {str(e)}"
+    finally:
+        conn.close()
+
+
 # 메인 루프
 running = True
 while running:
@@ -121,6 +143,10 @@ while running:
             elif mode == "login" and login_button.collidepoint(x, y):
                 if login_user(username_input, password_input):
                     status_message = "🎉 로그인 성공!"
+
+                    with open("logged_in_user.txt", "w", encoding="utf-8") as f:
+                        f.write(username_input)
+
                     pygame.display.flip()
                     pygame.time.delay(1000)  # 로그인 성공 메시지 잠깐 보여주기
                     pygame.quit()
