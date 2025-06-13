@@ -4,6 +4,7 @@ import time
 import os
 import pymysql
 import subprocess
+import sys  # Add this missing import
 
 
 def get_logged_in_username():
@@ -259,7 +260,7 @@ class Game:
                         return False
                 # 좋은 이미지와 충돌한 경우
                 elif current_level["good_img"] in e.img_path:
-                    self.score += 1
+                    # self.score += 1
                     print(f"{current_level['subject']} 충돌! 현재 점수: {self.score}, 총점: {self.total_score + self.score}")
                     self.enemy_list.remove(e)
                     if self.score % 10 == 0:
@@ -290,50 +291,43 @@ class Game:
         
         # 배경 그리기
         self.background.show_img(self.screen)
-        pygame.draw.rect(self.screen, self.gray_color, 
-                        [self.GAME_WIDTH, 0, self.TIMETABLE_WIDTH, self.HEIGHT])
         
-        # 게임 객체들 그리기
-        self.hero.show_img(self.screen)
+        # 미사일 그리기
         for m in self.missile_list:
             m.show_img(self.screen)
+        
+        # 적 그리기
         for e in self.enemy_list:
             e.show_img(self.screen)
         
-        # UI 텍스트 그리기 (현재 점수와 총점 모두 표시)
-        self.draw_text(f"남은 시간: {remaining_time}초", 20, 10)
-        self.draw_text(f"현재: {self.score}", 240, 10)
-        self.draw_text(f"총점: {self.total_score + self.score}", 240, 30)
-        self.draw_text(f"Lives: {self.lives}", 240, 50)
-        self.draw_text(f"Level: {self.difficulty}", 20, 50)
+        # 영웅 그리기
+        self.hero.show_img(self.screen)
         
-        # 시간표 그리기 (현재 난이도 강조)
-        self.draw_text("오늘의 시간표", self.GAME_WIDTH + 20, 20, self.black_color)
+        # 상단 정보 (점수, 생명, 시간) 출력
+        self.draw_text(f"Score: {self.score}", 10, 10)
+        self.draw_text(f"Lives: {self.lives}", 150, 10)
+        self.draw_text(f"Time: {remaining_time}", 300, 10)
         
-        timetable_subjects = [
-            (1, "1교시: JAVA", (128, 128, 128)),      # 회색 (기본)
-            (2, "2교시: HTML", (128, 128, 128)),      # 회색 (기본)
-            (3, "3교시: PYTHON", (128, 128, 128)),    # 회색 (기본)
-            (4, "4교시: PHP", (128, 128, 128)),       # 회색 (기본)
-            (5, "5교시: MY SQL", (128, 128, 128))     # 회색 (기본)
-        ]
+        # 오른쪽 시간표 영역
+        pygame.draw.rect(self.screen, self.gray_color, 
+                         (self.GAME_WIDTH, 0, self.TIMETABLE_WIDTH, self.HEIGHT))
         
-        for i, (level, subject_text, default_color) in enumerate(timetable_subjects):
-            y_pos = 60 + (i * 40)
+        # 시간표 텍스트
+        self.draw_text("시간표", self.GAME_WIDTH + 20, 20, (0, 0, 0))
+        
+        for level in range(1, 6):
+            subject = self.timetable[level]["subject"]
+            color = self.timetable[level]["color"]
+            y_pos = 60 + (level - 1) * 60
+            # 강조 표시
             if level == self.difficulty:
-                # 현재 난이도는 파란색으로 강조하고 배경색 추가
-                pygame.draw.rect(self.screen, (255, 255, 200), 
-                               [self.GAME_WIDTH + 15, y_pos - 5, 160, 30])
-                self.draw_text(f">>> {subject_text} <<<", self.GAME_WIDTH + 20, y_pos, (0, 0, 255))  # 파란색
+                pygame.draw.rect(self.screen, color, 
+                                 (self.GAME_WIDTH + 10, y_pos - 5, self.TIMETABLE_WIDTH - 20, 40))
+                self.draw_text(subject, self.GAME_WIDTH + 20, y_pos, self.white_color)
             else:
-                self.draw_text(subject_text, self.GAME_WIDTH + 20, y_pos, default_color)  # 회색
+                self.draw_text(subject, self.GAME_WIDTH + 20, y_pos, (0, 0, 0))
         
-        # 현재 과목 정보 표시
-        current_level = self.timetable.get(self.difficulty, self.timetable[1])
-        self.draw_text("현재 과목:", self.GAME_WIDTH + 20, 280, self.black_color)
-        self.draw_text(current_level["subject"], self.GAME_WIDTH + 20, 310, current_level["color"])
-        
-        pygame.display.flip()
+        pygame.display.update()
 
     
     
