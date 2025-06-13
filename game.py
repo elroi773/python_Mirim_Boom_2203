@@ -2,6 +2,18 @@ import pygame
 import random
 import time
 import os
+import pymysql
+import subprocess
+
+
+def get_logged_in_username():
+    try:
+        with open("logged_in_user.txt", "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return None
+
+
 
 class Img_Object:
     def __init__(self):
@@ -54,9 +66,10 @@ class Img_Object:
             screen.blit(self.img, (self.x, self.y))
 
 class Game:
-    def __init__(self, difficulty):
+    def __init__(self, difficulty, initial_score=0):  # initial_score 매개변수 추가
         pygame.init()
         self.difficulty = difficulty
+        self.total_score = initial_score  # 누적 점수를 저장할 변수 추가
         
         # 시간표 정보 (난이도별)
         self.timetable = {
@@ -90,7 +103,8 @@ class Game:
         self.reset_game()
 
     def reset_game(self):
-        self.score = 0
+        self.score = 0  # 현재 단계에서의 점수만 초기화
+        # self.total_score는 초기화하지 않음 (누적 유지)
         self.lives = 3
         self.missile_list = []
         self.enemy_list = []
@@ -210,12 +224,12 @@ class Game:
                     
                     # 현재 난이도의 좋은 이미지인지 확인
                     if current_level["good_img"] in e.img_path:
-                        print(f"{current_level['subject']} 맞음! 점수: {self.score}")
-                        self.score += 1
+                        print(f"{current_level['subject']} 맞음! 현재 점수: {self.score}, 총점: {self.total_score + self.score}")
+                        # self.score += 1
                         if self.score % 10 == 0 and self.score != 0:
                             bonus_point = 10
                             self.score += bonus_point
-                            print(f"보너스 점수! 현재 점수: {self.score}")
+                            print(f"보너스 점수! 현재 점수: {self.score}, 총점: {self.total_score + self.score}")
                     else:
                         # 적 이미지를 맞춘 경우
                         self.score += 1
@@ -246,12 +260,12 @@ class Game:
                 # 좋은 이미지와 충돌한 경우
                 elif current_level["good_img"] in e.img_path:
                     self.score += 1
-                    print(f"{current_level['subject']} 충돌! 점수: {self.score}")
+                    print(f"{current_level['subject']} 충돌! 현재 점수: {self.score}, 총점: {self.total_score + self.score}")
                     self.enemy_list.remove(e)
                     if self.score % 10 == 0:
                         bonus_point = 10
                         self.score += bonus_point
-                        print(f"보너스 점수! 현재 점수: {self.score}")
+                        print(f"보너스 점수! 현재 점수: {self.score}, 총점: {self.total_score + self.score}")
         return True
     
     def check_time_limit(self):
@@ -286,9 +300,10 @@ class Game:
         for e in self.enemy_list:
             e.show_img(self.screen)
         
-        # UI 텍스트 그리기
+        # UI 텍스트 그리기 (현재 점수와 총점 모두 표시)
         self.draw_text(f"남은 시간: {remaining_time}초", 20, 10)
-        self.draw_text(f"Score: {self.score}", 240, 10)
+        self.draw_text(f"현재: {self.score}", 240, 10)
+        self.draw_text(f"총점: {self.total_score + self.score}", 240, 30)
         self.draw_text(f"Lives: {self.lives}", 240, 50)
         self.draw_text(f"Level: {self.difficulty}", 20, 50)
         
@@ -319,11 +334,13 @@ class Game:
         self.draw_text(current_level["subject"], self.GAME_WIDTH + 20, 310, current_level["color"])
         
         pygame.display.flip()
+
+    
     
     def run_game(self):
         if not self.reset_game():
             print("게임 초기화 실패")
-            return False
+            return False, 0
         
         running = True
         
@@ -358,20 +375,61 @@ class Game:
             
             self.k += 1
         
-        return True
+        return True, self.score  # 현재 단계 점수 반환
     
     def quit_game(self):
         pygame.quit()
 
+
+
+def update_ranking(username, score):
+    conn = pymysql.connect(host='localhost', user='root', password='Mysql4344!', db='user_db', charset='utf8')
+    cur = conn.cursor()
+    
+    try:
+        # SCORE 컬럼이 없어도 오류가 발생하지 않도록 처리
+        sql = "UPDATE USERS SET SCORE = %s WHERE username = %s"
+        cur.execute(sql, (score, username))
+        conn.commit()
+        
+    except pymysql.err.OperationalError as e:
+        if "Unknown column 'SCORE'" in str(e):
+            # SCORE 컬럼 추가 후 다시 시도
+            cur.execute("ALTER TABLE USERS ADD COLUMN SCORE INT DEFAULT 0")
+            cur.execute("UPDATE USERS SET SCORE = %s WHERE username = %s", (score, username))
+            conn.commit()
+        else:
+            raise e
+    finally:
+        cur.close()
+        conn.close()
+
+
 def main():
+
+    
     print("게임을 시작합니다!")
     
+
+    username = get_logged_in_username()
+    if username is None:
+        print("로그인된 사용자 정보가 없습니다.")
+        return
+
+    total_accumulated_score = 0  # 전체 누적 점수
+    
     for level in range(1, 6):
-        print(f"\n==== 난이도 {level}단계 시작 ====\n")
-        game = Game(difficulty=level)
+        print(f"\n==== 난이도 {level}단계 시작 ====")
+        print(f"현재 누적 점수: {total_accumulated_score}")
+        print()
+        
+        game = Game(difficulty=level, initial_score=total_accumulated_score)
 
         try:
-            success = game.run_game()
+            success, stage_score = game.run_game()
+            total_accumulated_score += stage_score  # 각 단계 점수를 누적
+            print(f"난이도 {level} - 이번 단계 점수: {stage_score}, 총 누적 점수: {total_accumulated_score}")
+            
             if not success:
                 print(f"난이도 {level}에서 게임 종료")
                 break
@@ -383,6 +441,14 @@ def main():
         
         print(f"난이도 {level} 완료!")
         time.sleep(2)
+    
+    print(f"\n게임 종료! 최종 누적 점수: {total_accumulated_score}")
+    
+    update_ranking(username, total_accumulated_score)
+    subprocess.Popen([sys.executable, "./ranking.py"])
+
+    
+
 
 if __name__ == "__main__":
     main()
