@@ -4,9 +4,10 @@ import time
 import os
 import pymysql
 import subprocess
-import sys  # Add this missing import
+import sys  
 
 
+#로그인 한 사용자 이름을 파일에서 가져오는 함수
 def get_logged_in_username():
     try:
         with open("logged_in_user.txt", "r", encoding="utf-8") as f:
@@ -15,7 +16,7 @@ def get_logged_in_username():
         return None
 
 
-
+#이미지 오브젝트 클래스 (영웅, 미사일, 적)
 class Img_Object:
     def __init__(self):
         self.x = 0
@@ -27,9 +28,10 @@ class Img_Object:
         self.img = None
 
     def add_img(self, address):
+        #이미지가 존재하지 않으면 색상 블록으로 대체하게
         if not os.path.exists(address):
             print(f"[경고] 이미지 파일을 찾을 수 없습니다: {address}")
-            # 기본 이미지 생성 (색상 사각형)
+            # 색 매칭 하는 부분 
             self.img = pygame.Surface((50, 50))
             if "hero" in address:
                 self.img.fill((0, 255, 0))  # 초록색 - 영웅
@@ -45,6 +47,9 @@ class Img_Object:
             return
             
         try:
+            #이미지 파일을 불러오되 문제가 생기면 회색 블록 대체 
+            #위에 if 문에서 그래도 안되면..!
+            #.png 로 끝나면 투명한 배경을 포함한 이미지로 불러옴 
             if address.lower().endswith(".png"):
                 self.img = pygame.image.load(address).convert_alpha()
             else:
@@ -52,27 +57,30 @@ class Img_Object:
             self.img_path = address
         except pygame.error as e:
             print(f"[경고] 이미지 로드 실패: {address}, 오류: {e}")
-            # 기본 이미지로 대체
+            # 로딩 실패시 기본 회색 블록 
             self.img = pygame.Surface((50, 50))
             self.img.fill((128, 128, 128))
             self.img_path = address
 
+    #이미지 크기 조절 
     def change_size(self, width, height):
         if self.img:
             self.img = pygame.transform.scale(self.img, (width, height))
             self.width, self.height = self.img.get_size()
 
+    #화면에 이미지 표시 
     def show_img(self, screen):
         if self.img:
             screen.blit(self.img, (self.x, self.y))
 
+#실제 게임 로직 
 class Game:
     def __init__(self, difficulty, initial_score=0):  # initial_score 매개변수 추가
         pygame.init()
         self.difficulty = difficulty
         self.total_score = initial_score  # 누적 점수를 저장할 변수 추가
         
-        # 시간표 정보 (난이도별)
+        # 시간표 정보 (난이도별) 이미지, 경로, 색상 
         self.timetable = {
             1: {"subject": "JAVA", "good_img": "./img/java.png", "enemy_img": "./img/enemy.png", "color": (0, 0, 255)},
             2: {"subject": "HTML", "good_img": "./img/html.png", "enemy_img": "./img/css.png", "color": (255, 165, 0)},
@@ -81,6 +89,7 @@ class Game:
             5: {"subject": "MY SQL", "good_img": "./img/mysql.png", "enemy_img": "./img/mariadb.png", "color": (255, 20, 147)}
         }
         
+        #게임 화면 크기 정의 
         self.WIDTH = 600
         self.HEIGHT = 900
         self.GAME_WIDTH = 400
@@ -89,6 +98,7 @@ class Game:
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("pygameEX")
 
+        #기본 색상 설정 
         self.clock = pygame.time.Clock()
         self.black_color = (0, 0, 0)
         self.white_color = (255, 255, 255)
@@ -105,7 +115,6 @@ class Game:
 
     def reset_game(self):
         self.score = 0  # 현재 단계에서의 점수만 초기화
-        # self.total_score는 초기화하지 않음 (누적 유지)
         self.lives = 3
         self.missile_list = []
         self.enemy_list = []
@@ -114,7 +123,7 @@ class Game:
         self.space_on = False
         self.k = 0
         self.start_time = time.time()
-        self.time_limit = 30
+        self.time_limit = 30 # 30초 시간 제한 
 
         # 배경 설정
         self.background = Img_Object()
@@ -131,6 +140,7 @@ class Game:
 
         return True
     
+    #키보드 이벤트 처리 
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -151,6 +161,7 @@ class Game:
                     self.space_on = False
         return True
     
+    #영웅 이동 처리 
     def update_hero(self):
         if self.left_move:
             self.hero.x -= self.hero.move
@@ -160,7 +171,7 @@ class Game:
             self.hero.x += self.hero.move
             if self.hero.x >= self.GAME_WIDTH - self.hero.width:
                 self.hero.x = self.GAME_WIDTH - self.hero.width
-    
+    #미사일 생성 
     def create_missile(self):
         if self.space_on and self.k % 6 == 0:
             missile = Img_Object()
@@ -170,7 +181,7 @@ class Game:
             missile.y = self.hero.y - missile.height - 10
             missile.move = 8
             self.missile_list.append(missile)
-    
+    #미사일 위치 업데이트 
     def update_missiles(self):
         new_missile_list = []
         for m in self.missile_list:
@@ -178,7 +189,7 @@ class Game:
             if m.y > -m.height:
                 new_missile_list.append(m)
         self.missile_list = new_missile_list
-    
+    # 적 생성 (랜덤으로)
     def create_enemy(self):
         base_prob = 0.98 - (self.difficulty * 0.03)
         
@@ -202,7 +213,7 @@ class Game:
             obj.y = 15
             obj.move = 2 + self.difficulty
             self.enemy_list.append(obj)
-    
+    #적 위치 업데이트
     def update_enemies(self):
         new_enemy_list = []
         for e in self.enemy_list:
@@ -210,7 +221,7 @@ class Game:
             if e.y <= self.HEIGHT:
                 new_enemy_list.append(e)
         self.enemy_list = new_enemy_list
-    
+    #미사일과 적 충돌 체크 
     def check_missile_collisions(self):
         crash_m_list = []
         crash_e_list = []
@@ -242,7 +253,7 @@ class Game:
         for e in crash_e_list:
             if e in self.enemy_list:
                 self.enemy_list.remove(e)
-    
+    #영웅과 적 충돌 체크 
     def check_hero_collisions(self):
         current_level = self.timetable.get(self.difficulty, self.timetable[1])
         
@@ -268,7 +279,7 @@ class Game:
                         self.score += bonus_point
                         print(f"보너스 점수! 현재 점수: {self.score}, 총점: {self.total_score + self.score}")
         return True
-    
+    #시간 제한 검사 
     def check_time_limit(self):
         elapsed_time = time.time() - self.start_time
         remaining_time = max(0, int(self.time_limit - elapsed_time))
@@ -278,13 +289,13 @@ class Game:
             return False, remaining_time
         
         return True, remaining_time
-    
+    #텍스트 그리기 
     def draw_text(self, text, pos_x, pos_y, color=None):
         if color is None:
             color = self.white_color
         img = self.font.render(text, True, color)
         self.screen.blit(img, (pos_x, pos_y))
-    
+    #화면 그리기 
     def draw_game(self, remaining_time):
         # 화면 지우기
         self.screen.fill(self.black_color)
@@ -337,7 +348,7 @@ class Game:
         pygame.display.flip()
 
     
-    
+    #게임 메인 루프 
     def run_game(self):
         if not self.reset_game():
             print("게임 초기화 실패")
@@ -382,7 +393,7 @@ class Game:
         pygame.quit()
 
 
-
+#랭킹 업데이트 (DB에 점수 저장)
 def update_ranking(username, score):
     conn = pymysql.connect(host='localhost', user='root', password='Mysql4344!', db='user_db', charset='utf8')
     cur = conn.cursor()
@@ -405,7 +416,7 @@ def update_ranking(username, score):
         cur.close()
         conn.close()
 
-
+#게임 실행 메인 함수 
 def main():
 
     
